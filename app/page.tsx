@@ -3,7 +3,7 @@ import Link from 'next/link';
 export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24 gap-8 bg-gray-100">
-      <h1 className="text-4xl font-bold text-gray-800">Lucky Draw System</h1>
+      <h1 className="text-4xl font-bold text-gray-800">PickMe</h1>
       <div className="flex gap-4">
         <Link 
           href="/admin" 

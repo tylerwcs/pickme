@@ -128,7 +128,7 @@ export default function DisplayPage() {
         style={{ background: backgroundColor }}
       >
         <div className="text-center">
-          <h1 className="text-6xl font-bold mb-4 text-white drop-shadow-md">Lucky Draw</h1>
+          <h1 className="text-6xl font-bold mb-4 text-white drop-shadow-md">PickMe</h1>
           <p className="text-2xl opacity-80 text-white drop-shadow-md">Waiting for Admin to start...</p>
         </div>
       </div>
