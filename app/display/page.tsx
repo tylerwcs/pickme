@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { Participant, ChannelMessage } from '@/types';
 import RollingBox from '@/components/RollingBox';
@@ -14,6 +14,7 @@ export default function DisplayPage() {
   const [headers, setHeaders] = useState<string[]>(['Staff ID', 'Name', 'Company']);
   const [displayCount, setDisplayCount] = useState(0);
   const [isRolling, setIsRolling] = useState(false);
+  const lastRollTimestampRef = useRef<number>(0);
 
   useEffect(() => {
     const bc = new BroadcastChannel('lucky_draw_channel');
@@ -32,36 +33,52 @@ export default function DisplayPage() {
     const interval = setInterval(pollState, 1000); // Poll every second
 
     const handleMessage = (msg: ChannelMessage) => {
-      // Avoid processing if state hasn't changed effectively, 
-      // but simpler to just re-apply state since React diffing handles UI updates efficiently.
-      // However, for animation (START_ROLL), we need to be careful not to re-trigger it.
-      // We can check a timestamp or just rely on 'isRolling' check.
-      
       if (msg.type === 'START_ROLL') {
-        // Only start if not already rolling or if forced count changes
-        // But since polling is frequent, we need to make sure we don't reset 'winners' array constantly if we are already rolling.
-        // Actually, the server state sends START_ROLL during the whole duration? 
-        // No, server state just returns the *last* known message.
-        // If the last message was START_ROLL, and we are already rolling, do nothing.
+        // Check timestamp to prevent duplicate processing
+        const msgTimestamp = msg.timestamp || 0;
+        if (msgTimestamp > 0 && msgTimestamp <= lastRollTimestampRef.current) {
+          // This is an old message, ignore it
+          return;
+        }
         
+        // Update timestamp reference
+        if (msgTimestamp > 0) {
+          lastRollTimestampRef.current = msgTimestamp;
+        }
+        
+        // Update display count
         setDisplayCount(prev => {
             if (prev !== msg.count) return msg.count;
             return prev;
         });
-        
-        setIsRolling(prev => {
-            if (!prev) {
-                // New roll started
-                if (msg.pool) setParticipants(msg.pool);
-                if (msg.headers) setHeaders(msg.headers);
-                setWinners([]);
-                return true;
-            }
-            return true;
-        });
 
+        // Update background and grid columns first
         setBackgroundColor(prev => msg.backgroundColor || prev);
         setGridColumns(prev => msg.gridColumns);
+
+        // Update pool and headers first, then set isRolling in next tick
+        // This ensures RollingBox has the correct pool when it starts rolling
+        if (msg.pool) {
+          setParticipants(msg.pool);
+        }
+        if (msg.headers) {
+          setHeaders(msg.headers);
+        }
+        
+        // Clear winners immediately
+        setWinners([]);
+        
+        // Use requestAnimationFrame to ensure DOM updates are processed
+        // This is especially important in production where state updates might be batched differently
+        requestAnimationFrame(() => {
+          setIsRolling(prev => {
+            if (!prev) {
+              // New roll started
+              return true;
+            }
+            return prev; // Keep current state if already rolling
+          });
+        });
 
       } else if (msg.type === 'STOP_ROLL') {
         setIsRolling(prev => {

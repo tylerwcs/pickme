@@ -13,6 +13,8 @@ interface RollingBoxProps {
 export default function RollingBox({ isRolling, winner, pool, headers }: RollingBoxProps) {
   const [current, setCurrent] = useState<Participant | null>(null);
   const [animationClass, setAnimationClass] = useState('');
+  const poolRef = useRef<Participant[]>(pool);
+  const isRollingRef = useRef<boolean>(isRolling);
 
   // Helper to identify the "Primary" field (usually Name)
   // Heuristic: If there's a field with "name" in it, use that as primary.
@@ -39,28 +41,49 @@ export default function RollingBox({ isRolling, winner, pool, headers }: Rolling
     return "text-base font-bold text-gray-900 leading-tight mb-1 line-clamp-2 px-1 text-center font-serif"; // Default Big - Adjusted
   };
 
+  // Update refs when props change
   useEffect(() => {
-    // Initial random state
-    if (!current && pool.length > 0) {
+    poolRef.current = pool;
+    isRollingRef.current = isRolling;
+  }, [pool, isRolling]);
+
+  useEffect(() => {
+    // Initial random state - only set if not rolling and current is null
+    // This prevents visual jumps when pool updates during roll start
+    if (!current && pool.length > 0 && !isRolling) {
         setCurrent(pool[Math.floor(Math.random() * pool.length)]);
     }
-  }, [pool]);
+  }, [pool, current, isRolling]);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: NodeJS.Timeout | null = null;
+    let timeoutId: NodeJS.Timeout | null = null;
 
+    // Only start rolling if isRolling is true AND pool is valid and not empty
+    // This prevents starting with stale pool data
     if (isRolling && pool.length > 0) {
-      setAnimationClass('animate-slot-spin');
-      interval = setInterval(() => {
-        const random = pool[Math.floor(Math.random() * pool.length)];
-        setCurrent(random);
-      }, 50); 
+      // Small delay to ensure pool state is fully updated
+      // This is especially important in production where state updates might be batched
+      timeoutId = setTimeout(() => {
+        setAnimationClass('animate-slot-spin');
+        interval = setInterval(() => {
+          // Use ref to get the latest pool value
+          const currentPool = poolRef.current;
+          if (currentPool.length > 0) {
+            const random = currentPool[Math.floor(Math.random() * currentPool.length)];
+            setCurrent(random);
+          }
+        }, 50);
+      }, 10); // Small delay to ensure pool is updated
     } else if (!isRolling && winner) {
       setAnimationClass('');
       setCurrent(winner);
     }
 
-    return () => clearInterval(interval);
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (interval) clearInterval(interval);
+    };
   }, [isRolling, winner, pool]);
 
   if (!current) return <div className="bg-white border-4 border-yellow-500 h-32 w-full rounded-lg shadow-lg bg-gradient-to-b from-yellow-100 to-white"></div>;
