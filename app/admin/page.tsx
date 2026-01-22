@@ -88,27 +88,24 @@ export default function AdminPage() {
     
     setIsRolling(true);
     
-    const startRollMessage: ChannelMessage = { 
-      type: 'START_ROLL', 
-      count: winnerCount, 
-      gridColumns, 
-      duration, 
-      backgroundColor, 
-      removeWinners, 
-      pool: participants, 
-      headers,
-      timestamp: Date.now()
-    };
-    
     if (channel) {
-        channel.postMessage(startRollMessage);
+        channel.postMessage({ type: 'START_ROLL', count: winnerCount, gridColumns, duration, backgroundColor, removeWinners, pool: participants, headers });
     }
 
     // Sync via API
     await fetch('/api/draw-state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(startRollMessage),
+        body: JSON.stringify({ 
+          type: 'START_ROLL', 
+          count: winnerCount, 
+          gridColumns, 
+          duration, 
+          backgroundColor, 
+          removeWinners,
+          pool: participants,
+          headers
+        } as ChannelMessage),
     });
 
     // Auto-stop after duration

@@ -16,7 +16,7 @@ export interface DrawSettings {
 }
 
 export type ChannelMessage = 
-  | { type: 'START_ROLL'; count: number; gridColumns: number; duration: number; backgroundColor: string; removeWinners: boolean; pool?: Participant[]; headers?: string[]; timestamp?: number }
+  | { type: 'START_ROLL'; count: number; gridColumns: number; duration: number; backgroundColor: string; removeWinners: boolean; pool?: Participant[]; headers?: string[] }
   | { type: 'STOP_ROLL'; winners: Participant[] }
   | { type: 'RESET' }
   | { type: 'UPDATE_COLUMNS'; gridColumns: number }
